@@ -57,7 +57,7 @@ function DonutChart({ title, data, centerLabel, centerSub, colors = DEFAULT_COLO
                   borderRadius: theme.radius.md,
                   fontSize: 12,
                 }}
-                formatter={(value: number) => [`${value}%`, ""]}
+                formatter={(value: any) => [`${value}%`, ""]}
               />
             </PieChart>
           </ResponsiveContainer>
