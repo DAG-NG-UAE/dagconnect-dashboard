@@ -1,5 +1,25 @@
 import { supabase } from "./supabase"
 
+export interface FilterOptions {
+  month?: number // 1-12
+  year?: number
+}
+
+/**
+ * Helper to build Supabase date filters
+ */
+function buildDateFilter(query: any, dateColumn: string, filters: FilterOptions) {
+  if (filters.year) {
+    const start = new Date(filters.year, (filters.month || 1) - 1, 1).toISOString()
+    const end = filters.month 
+      ? new Date(filters.year, filters.month, 0, 23, 59, 59).toISOString()
+      : new Date(filters.year, 11, 31, 23, 59, 59).toISOString()
+    
+    return query.gte(dateColumn, start).lte(dateColumn, end)
+  }
+  return query
+}
+
 /**
  * Fetch top-level KPIs for the Dashboard
  * - Total Reach (Store listing visitors)
@@ -7,11 +27,14 @@ import { supabase } from "./supabase"
  * - Service Demand (Total requests)
  * - Conversion Rate (Store listing conversion)
  */
-export async function getKpiSummary() {
+export async function getKpiSummary(filters: FilterOptions = {}) {
   // 1. Total Reach & Conversion Rate from store_performance_country
-  const { data: storePerf, error: storeError } = await supabase
+  let storeQuery = supabase
     .from('store_performance_country')
     .select('store_listing_visitors, store_listing_conversion_rate')
+  
+  storeQuery = buildDateFilter(storeQuery, 'date', filters)
+  const { data: storePerf, error: storeError } = await storeQuery
 
   if (storeError) console.error("Error fetching store performance:", storeError)
 
@@ -22,16 +45,22 @@ export async function getKpiSummary() {
     : 0
 
   // 2. Registered Users count
-  const { count: userCount, error: userError } = await supabase
+  let userQuery = supabase
     .from('user_login_accounts')
     .select('*', { count: 'exact', head: true })
+  
+  userQuery = buildDateFilter(userQuery, 'createddate', filters)
+  const { count: userCount, error: userError } = await userQuery
 
   if (userError) console.error("Error fetching user count:", userError)
 
   // 3. Service Demand (Total service requests)
-  const { count: requestCount, error: requestError } = await supabase
+  let requestQuery = supabase
     .from('service_request')
     .select('*', { count: 'exact', head: true })
+  
+  requestQuery = buildDateFilter(requestQuery, 'createddate', filters)
+  const { count: requestCount, error: requestError } = await requestQuery
 
   if (requestError) console.error("Error fetching request count:", requestError)
 
@@ -79,11 +108,13 @@ export async function getKpiSummary() {
  * Fetch Trend Data (Visitors vs Acquisitions)
  * Uses store_performance_country grouped by date
  */
-export async function getTrendData() {
-  const { data, error } = await supabase
+export async function getTrendData(filters: FilterOptions = {}) {
+  let query = supabase
     .from('store_performance_country')
     .select('date, store_listing_visitors, store_listing_acquisitions')
-    .order('date', { ascending: true })
+  
+  query = buildDateFilter(query, 'date', filters)
+  const { data, error } = await query.order('date', { ascending: true })
 
   if (error) {
     console.error("Error fetching trend data:", error)
@@ -107,11 +138,13 @@ export async function getTrendData() {
 /**
  * Fetch Service Request distribution (contact_us vs enquire_now)
  */
-export async function getServiceRequestStats() {
-  const { data, error } = await supabase
+export async function getServiceRequestStats(filters: FilterOptions = {}) {
+  let query = supabase
     .from('service_request')
     .select('requestcategory, createddate')
-    .order('createddate', { ascending: true })
+  
+  query = buildDateFilter(query, 'createddate', filters)
+  const { data, error } = await query.order('createddate', { ascending: true })
 
   if (error) {
     console.error("Error fetching service requests:", error)
@@ -137,16 +170,19 @@ export async function getServiceRequestStats() {
     }
   })
 
-  return Object.values(grouped).slice(-5) // Return last 5 days
+  return Object.values(grouped)
 }
 
 /**
  * Fetch Account Health distribution
  */
-export async function getAccountHealthStats() {
-  const { data, error } = await supabase
+export async function getAccountHealthStats(filters: FilterOptions = {}) {
+  let query = supabase
     .from('user_login_accounts')
     .select('accountstatus')
+  
+  query = buildDateFilter(query, 'createddate', filters)
+  const { data, error } = await query
 
   if (error) {
     console.error("Error fetching account status:", error)
@@ -167,10 +203,13 @@ export async function getAccountHealthStats() {
 /**
  * Fetch Platform and User category distributions for Donut charts
  */
-export async function getAccountDistributions() {
-  const { data, error } = await supabase
+export async function getAccountDistributions(filters: FilterOptions = {}) {
+  let query = supabase
     .from('user_login_accounts')
     .select('platform, usercategory')
+  
+  query = buildDateFilter(query, 'createddate', filters)
+  const { data, error } = await query
 
   if (error) {
     console.error("Error fetching distributions:", error)
@@ -205,10 +244,13 @@ export async function getAccountDistributions() {
 /**
  * Fetch Traffic Source data
  */
-export async function getTrafficSourceStats() {
-  const { data, error } = await supabase
+export async function getTrafficSourceStats(filters: FilterOptions = {}) {
+  let query = supabase
     .from('store_performance_traffic_source')
     .select('traffic_source, store_listing_acquisitions')
+  
+  query = buildDateFilter(query, 'date', filters)
+  const { data, error } = await query
 
   if (error) {
     console.error("Error fetching traffic sources:", error)
@@ -229,10 +271,13 @@ export async function getTrafficSourceStats() {
 /**
  * Fetch Country data
  */
-export async function getCountryStats() {
-  const { data, error } = await supabase
+export async function getCountryStats(filters: FilterOptions = {}) {
+  let query = supabase
     .from('store_performance_country')
     .select('country_region, store_listing_acquisitions')
+  
+  query = buildDateFilter(query, 'date', filters)
+  const { data, error } = await query
 
   if (error) {
     console.error("Error fetching country stats:", error)
@@ -254,9 +299,15 @@ export async function getCountryStats() {
 /**
  * Fetch Purchased items vs vehicles
  */
-export async function getPurchaseStats() {
-  const { data: items, error: iErr } = await supabase.from('purchased_items').select('createddate')
-  const { data: vehicles, error: vErr } = await supabase.from('purchased_vehicle_items').select('createddate')
+export async function getPurchaseStats(filters: FilterOptions = {}) {
+  let iQuery = supabase.from('purchased_items').select('createddate')
+  let vQuery = supabase.from('purchased_vehicle_items').select('createddate')
+  
+  iQuery = buildDateFilter(iQuery, 'createddate', filters)
+  vQuery = buildDateFilter(vQuery, 'createddate', filters)
+
+  const { data: items, error: iErr } = await iQuery
+  const { data: vehicles, error: vErr } = await vQuery
   
   if (iErr || vErr) {
     console.error("Error fetching purchase stats:", iErr || vErr)
@@ -277,5 +328,97 @@ export async function getPurchaseStats() {
     grouped[d].vehicles++
   })
 
-  return Object.values(grouped).slice(-4)
+  return Object.values(grouped)
+}
+
+/**
+ * Fetch daily registration stats
+ */
+export async function getDailyRegistrationStats(filters: FilterOptions = {}) {
+  let query = supabase
+    .from('user_login_accounts')
+    .select('createddate')
+  
+  query = buildDateFilter(query, 'createddate', filters)
+  const { data, error } = await query.order('createddate', { ascending: true })
+
+  if (error) {
+    console.error("Error fetching daily registrations:", error)
+    return []
+  }
+
+  const grouped: Record<string, { date: string, count: number }> = {}
+  data.forEach((row) => {
+    const d = new Date(row.createddate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })
+    if (!grouped[d]) grouped[d] = { date: d, count: 0 }
+    grouped[d].count++
+  })
+
+  return Object.values(grouped)
+}
+
+/**
+ * Get available years and months from the user_login_accounts table
+ */
+export async function getAvailableFilterOptions() {
+  const { data, error } = await supabase
+    .from('user_login_accounts')
+    .select('createddate')
+  
+  if (error) return { years: [], months: [] }
+
+  const years = new Set<number>()
+  const months = new Set<number>()
+
+  data.forEach(row => {
+    const d = new Date(row.createddate)
+    years.add(d.getFullYear())
+    months.add(d.getMonth() + 1)
+  })
+
+  return {
+    years: Array.from(years).sort((a, b) => b - a),
+    months: Array.from(months).sort((a, b) => a - b)
+  }
+}
+
+/**
+ * Fetch the single most recent 'createddate' across key tables
+ * to act as a "Last updated" signal for the dashboard.
+ */
+export async function getLastUpdatedTimestamp() {
+  const tables = [
+    'user_login_accounts',
+    'service_request',
+    'store_performance_country',
+    'store_performance_traffic_source'
+  ]
+
+  const results = await Promise.all(
+    tables.map(table => 
+      supabase
+        .from(table)
+        .select('createddate')
+        .order('createddate', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    )
+  )
+
+  const dates = results
+    .filter(r => !r.error && r.data?.createddate)
+    .map(r => new Date(r.data!.createddate).getTime())
+
+  if (dates.length === 0) return "N/A"
+
+  const latest = new Date(Math.max(...dates))
+  
+  return latest.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC'
+  }) + " (UTC)"
 }

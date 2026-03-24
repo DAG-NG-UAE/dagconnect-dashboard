@@ -50,7 +50,7 @@ export default function AccountHealth({ active, inactive, expired }: AccountHeal
       </div>
 
       {/* Bar chart */}
-      <ResponsiveContainer width="100%" height={130}>
+      <ResponsiveContainer width="100%" height={160}>
         <BarChart data={barData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.neutral.border} vertical={false} />
           <XAxis dataKey="label" tick={{ fontSize: 11, fill: theme.colors.neutral.muted }} tickLine={false} axisLine={false} />
