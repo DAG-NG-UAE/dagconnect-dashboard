@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+import dynamicImport from "next/dynamic"
 import { theme } from "@/lib/theme"
 import styles from "./page.module.css"
 import KpiCard from "@/components/dashboard/KpiCard"
@@ -13,6 +14,7 @@ import CountryChart from "@/components/dashboard/Countrychart"
 import PurchaseChart from "@/components/dashboard/Purchasechart"
 import RegistrationChart from "@/components/dashboard/RegistrationChart"
 import FilterSection from "@/components/dashboard/FilterSection"
+import UserLocations from "@/components/dashboard/UserLocations"
 
 // Live Queries
 import { 
@@ -27,6 +29,7 @@ import {
   getDailyRegistrationStats,
   getAvailableFilterOptions,
   getLastUpdatedTimestamp,
+  getUserLocations,
   FilterOptions
 } from "@/lib/queries"
 
@@ -53,7 +56,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     purchaseStats,
     registrationData,
     filterOptions,
-    lastUpdated
+    lastUpdated,
+    userLocations
   ] = await Promise.all([
     getKpiSummary(filters),
     getTrendData(filters),
@@ -65,7 +69,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     getPurchaseStats(filters),
     getDailyRegistrationStats(filters),
     getAvailableFilterOptions(),
-    getLastUpdatedTimestamp()
+    getLastUpdatedTimestamp(),
+    getUserLocations()
   ])
 
   const currentPeriod = filters.month && filters.year 
@@ -99,13 +104,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           ))}
         </section>
 
+        {/* Nigeria Activity Map (Full Width Spotlight) */}
+        <section style={{ marginBottom: 32 }}>
+           <UserLocations locations={userLocations} />
+        </section>
+
         {/* Main Charts Architecture */}
         <main className={styles.mainGrid}>
           {/* Main Work Column (Charts) */}
           <div className={styles.leftCol}>
-            <div className={styles.longChart}>
-              <TrendChart data={trendData} />
-            </div>
+            
             
             <div className={styles.longChart}>
               <RegistrationChart data={registrationData} />
@@ -131,6 +139,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     System health check: **100% stable**
                   </div>
               </div>
+            </div>
+            <div className={styles.longChart}>
+              <TrendChart data={trendData} />
             </div>
             
             <PurchaseChart data={purchaseStats} />
