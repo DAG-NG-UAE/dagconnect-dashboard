@@ -38,6 +38,21 @@ export default function TrendChart({ data }: TrendChartProps) {
         </span>
       </div>
 
+      {/* Data freshness notice */}
+      <div style={{
+        display: "flex", alignItems: "flex-start", gap: 8,
+        background: "#fffbeb", border: "1px solid #fde68a",
+        borderRadius: 8, padding: "8px 12px", marginBottom: 12, fontSize: 11,
+        color: "#92400e",
+      }}>
+        <span style={{ fontSize: 13, lineHeight: 1.4 }}>⚠️</span>
+        <span style={{ lineHeight: 1.5 }}>
+          <strong>Data may not be current.</strong> This chart is sourced from
+          Google Play Console's private storage bucket, which Google does not
+          update on a daily basis. Some figures may reflect a lag of several days.
+        </span>
+      </div>
+
       {/* Custom legend */}
       <div style={{ display: "flex", gap: 16, marginBottom: 12, fontSize: 12, color: theme.colors.neutral.muted }}>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -46,7 +61,7 @@ export default function TrendChart({ data }: TrendChartProps) {
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <span style={{ width: 10, height: 10, borderRadius: 2, background: theme.chart.purple, display: "inline-block" }} />
-          Acquisitions
+          Installs
         </span>
       </div>
 

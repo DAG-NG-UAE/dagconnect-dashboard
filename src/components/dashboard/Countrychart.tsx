@@ -67,6 +67,15 @@ export default function CountryChart({ data }: CountryChartProps) {
           </div>
         </div>
       ))}
+
+      {/* Other footnote */}
+      <div style={{
+        marginTop: 12, fontSize: 10.5, color: theme.colors.neutral.muted,
+        borderTop: `1px dashed ${theme.colors.neutral.border}`,
+        paddingTop: 8, lineHeight: 1.5,
+      }}>
+        <strong>* "Other"</strong> is a catch-all category returned by Google Play Console and is not broken down by specific country or region.
+      </div>
     </div>
   )
 }
