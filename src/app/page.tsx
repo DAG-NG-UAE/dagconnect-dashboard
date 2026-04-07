@@ -73,6 +73,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     getUserLocations()
   ])
 
+  console.log('filterOptions', filterOptions)
   const currentPeriod = filters.month && filters.year 
     ? `${new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date(filters.year, filters.month - 1))} ${filters.year}`
     : filters.year ? `${filters.year}` : "All Time"

@@ -9,11 +9,12 @@ export interface FilterOptions {
  * Helper to build Supabase date filters
  */
 function buildDateFilter(query: any, dateColumn: string, filters: FilterOptions) {
-  if (filters.year) {
-    const start = new Date(filters.year, (filters.month || 1) - 1, 1).toISOString()
+  const year = filters.year ?? (filters.month ? 2026 : undefined)
+  if (year) {
+    const start = new Date(year, (filters.month || 1) - 1, 1).toISOString()
     const end = filters.month
-      ? new Date(filters.year, filters.month, 0, 23, 59, 59).toISOString()
-      : new Date(filters.year, 11, 31, 23, 59, 59).toISOString()
+      ? new Date(year, filters.month, 0, 23, 59, 59).toISOString()
+      : new Date(year, 11, 31, 23, 59, 59).toISOString()
 
     return query.gte(dateColumn, start).lte(dateColumn, end)
   }
@@ -143,12 +144,13 @@ export async function getServiceRequestStats(filters: FilterOptions = {}) {
     .from('service_request_stats_view')
     .select('request_date, contact_us_count, enquire_now_count')
 
-  if (filters.year) {
-    const start = new Date(filters.year, (filters.month || 1) - 1, 1).toISOString()
+  const srYear = filters.year ?? (filters.month ? 2026 : undefined)
+  if (srYear) {
+    const start = new Date(srYear, (filters.month || 1) - 1, 1).toISOString()
     const end = filters.month
-      ? new Date(filters.year, filters.month, 0, 23, 59, 59).toISOString()
-      : new Date(filters.year, 11, 31, 23, 59, 59).toISOString()
-    
+      ? new Date(srYear, filters.month, 0, 23, 59, 59).toISOString()
+      : new Date(srYear, 11, 31, 23, 59, 59).toISOString()
+
     query = query.gte('request_date', start).lte('request_date', end)
   }
 
@@ -331,15 +333,22 @@ export async function getDailyRegistrationStats(filters: FilterOptions = {}) {
   let query = supabase
     .from('daily_registrations_view')
     .select('registration_date, registration_count')
-  // We filter the view's 'registration_date' instead of the raw 'createddate'
-  if (filters.year) {
-    const start = new Date(filters.year, (filters.month || 1) - 1, 1).toISOString()
-    const end = filters.month
-      ? new Date(filters.year, filters.month, 0, 23, 59, 59).toISOString()
-      : new Date(filters.year, 11, 31, 23, 59, 59).toISOString()
-    
+
+  // Use YYYY-MM-DD strings to match the date-only registration_date column.
+  // Default to 2026 if a month is selected but no year is provided.
+  const year = filters.year ?? (filters.month ? 2026 : undefined)
+
+  if (year && filters.month) {
+    const lastDay = new Date(year, filters.month, 0).getDate()
+    const start = `${year}-${filters.month.toString().padStart(2, '0')}-01`
+    const end = `${year}-${filters.month.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
+    query = query.gte('registration_date', start).lte('registration_date', end)
+  } else if (year) {
+    const start = `${year}-01-01`
+    const end = `${year}-12-31`
     query = query.gte('registration_date', start).lte('registration_date', end)
   }
+
   const { data, error } = await query.order('registration_date', { ascending: true })
   if (error) {
     console.error("Error fetching daily registrations view:", error)
@@ -357,25 +366,18 @@ export async function getDailyRegistrationStats(filters: FilterOptions = {}) {
  */
 export async function getAvailableFilterOptions() {
   const { data, error } = await supabase
-    .from('user_login_accounts')
-    .select('createddate')
-    .limit(10000)
+    .from('filter_options_view')
+    .select('year, month')
 
-  if (error) return { years: [], months: [] }
-
-  const years = new Set<number>()
-  const months = new Set<number>()
-
-  data.forEach(row => {
-    const d = new Date(row.createddate)
-    years.add(d.getFullYear())
-    months.add(d.getMonth() + 1)
-  })
-
-  return {
-    years: Array.from(years).sort((a, b) => b - a),
-    months: Array.from(months).sort((a, b) => a - b)
+  if (error) {
+    console.error('Error fetching filter_options_view', error)
+    return { years: [], months: [] }
   }
+
+  const years = [...new Set(data.map(r => r.year))].sort((a, b) => b - a)
+  const months = [...new Set(data.map(r => r.month))].sort((a, b) => a - b)
+
+  return { years, months }
 }
 
 /**
@@ -442,7 +444,7 @@ export async function getUserLocations() {
     if (!latestPerUser[row.loginid]) {
       let state = 'Unknown'
       let city = 'Unknown'
-      
+
       if (row.address) {
         try {
           // If it's already an object, use it directly, otherwise parse if it's a string
