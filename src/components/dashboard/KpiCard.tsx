@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { theme } from "@/lib/theme"
 
 interface KpiCardProps {
@@ -8,6 +9,7 @@ interface KpiCardProps {
   deltaType?: "up" | "down" | "neutral"
   accent: "pink" | "purple" | "peach" | "rose"
   icon: string
+  href?: string
 }
 
 const accentMap = {
@@ -23,10 +25,10 @@ const deltaStyles = {
   neutral: { background: theme.colors.purple[50],  color: theme.colors.purple[600]  },
 }
 
-export default function KpiCard({ label, value, sub, delta, deltaType = "neutral", accent, icon }: KpiCardProps) {
+export default function KpiCard({ label, value, sub, delta, deltaType = "neutral", accent, icon, href }: KpiCardProps) {
   const a = accentMap[accent]
 
-  return (
+  const card = (
     <div style={{
       background: theme.colors.neutral.surface,
       border: `1px solid ${theme.colors.neutral.border}`,
@@ -35,6 +37,7 @@ export default function KpiCard({ label, value, sub, delta, deltaType = "neutral
       position: "relative",
       overflow: "hidden",
       fontFamily: theme.fonts.body,
+      cursor: href ? "pointer" : "default",
     }}>
       {/* Accent blob top-right */}
       <div style={{
@@ -78,6 +81,22 @@ export default function KpiCard({ label, value, sub, delta, deltaType = "neutral
           {delta}
         </span>
       )}
+
+      {href && (
+        <div style={{ marginTop: 10, fontSize: 11, color: a.iconText, fontWeight: 500 }}>
+          View all →
+        </div>
+      )}
     </div>
   )
+
+  if (href) {
+    return (
+      <Link href={href} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+        {card}
+      </Link>
+    )
+  }
+
+  return card
 }

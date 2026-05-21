@@ -422,6 +422,60 @@ export async function getLastUpdatedTimestamp() {
 }
 
 /**
+ * Fetch full customer detail rows (name, phone, email, address)
+ * via the inner-joined customer_details_view
+ */
+export async function getCustomerDetails() {
+  const { data, error } = await supabase
+    .from('customer_details_view')
+    .select('customer_since, loginid, fullname, fullphonenumber, email, permanentaddress')
+    .order('customer_since', { ascending: false })
+
+  if (error) {
+    console.error("Error fetching customer details:", error)
+    return []
+  }
+
+  return data as {
+    customer_since: string
+    loginid: string
+    fullname: string | null
+    fullphonenumber: string | null
+    email: string | null
+    permanentaddress: string | null
+  }[]
+}
+
+/**
+ * Fetch customer NIN submission count from customer_details_view.
+ * Using the same view as the details page so the KPI card and table always agree.
+ */
+export async function getCustomerStats(filters: FilterOptions = {}) {
+  let query = supabase
+    .from('customer_details_view')
+    .select('*', { count: 'exact', head: true })
+
+  const year = filters.year ?? (filters.month ? 2026 : undefined)
+  if (year && filters.month) {
+    const lastDay = new Date(year, filters.month, 0).getDate()
+    const start = `${year}-${filters.month.toString().padStart(2, '0')}-01`
+    const end = `${year}-${filters.month.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
+    query = query.gte('customer_since', start).lte('customer_since', end)
+  } else if (year) {
+    query = query.gte('customer_since', `${year}-01-01`).lte('customer_since', `${year}-12-31`)
+  }
+
+  const { count, error } = await query
+
+  if (error) {
+    console.error("Error fetching customer stats:", error)
+    return { total: 0 }
+  }
+
+  return { total: count ?? 0 }
+}
+
+/**
  * Fetch the latest login location for each user
  * Logic: Join user_login_accounts to the latest activity row (OTP/LOGIN)
  */

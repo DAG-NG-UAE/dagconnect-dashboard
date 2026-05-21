@@ -17,19 +17,20 @@ import FilterSection from "@/components/dashboard/FilterSection"
 import UserLocations from "@/components/dashboard/UserLocations"
 
 // Live Queries
-import { 
-  getKpiSummary, 
-  getTrendData, 
-  getServiceRequestStats, 
-  getAccountHealthStats, 
-  getAccountDistributions, 
-  getTrafficSourceStats, 
-  getCountryStats, 
+import {
+  getKpiSummary,
+  getTrendData,
+  getServiceRequestStats,
+  getAccountHealthStats,
+  getAccountDistributions,
+  getTrafficSourceStats,
+  getCountryStats,
   getPurchaseStats,
   getDailyRegistrationStats,
   getAvailableFilterOptions,
   getLastUpdatedTimestamp,
   getUserLocations,
+  getCustomerStats,
   FilterOptions
 } from "@/lib/queries"
 
@@ -57,7 +58,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     registrationData,
     filterOptions,
     lastUpdated,
-    userLocations
+    userLocations,
+    customerStats,
   ] = await Promise.all([
     getKpiSummary(filters),
     getTrendData(filters),
@@ -70,13 +72,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     getDailyRegistrationStats(filters),
     getAvailableFilterOptions(),
     getLastUpdatedTimestamp(),
-    getUserLocations()
+    getUserLocations(),
+    getCustomerStats(filters),
   ])
 
   console.log('filterOptions', filterOptions)
   const currentPeriod = filters.month && filters.year 
     ? `${new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date(filters.year, filters.month - 1))} ${filters.year}`
-    : filters.year ? `${filters.year}` : "All Time"
+    : filters.year ? `${filters.year}` : "2025-05-03"
 
   return (
     <div className={styles.dashboardContainer}>
@@ -103,6 +106,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             //@ts-ignore - accent mapping helper in KpiCard
             <KpiCard key={i} {...kpi} />
           ))}
+          <KpiCard
+            label="NIN Submissions"
+            value={customerStats.total.toLocaleString()}
+            sub="users who entered their NIN"
+            accent="purple"
+            icon="✓"
+            href="/nin-submissions"
+          />
         </section>
 
         {/* Nigeria Activity Map (Full Width Spotlight) */}
